@@ -3,7 +3,7 @@
 /// <reference path="tool_panel.ts" />
 namespace GUI {
     export var GRID_STEP = 20;
-    export var updateRate = 50;
+    export var updateRate = 80;
     
     var gridWidth = Math.floor(window.innerWidth / (GRID_STEP * 1.1));
     var gridHeight = Math.floor(window.innerHeight / (GRID_STEP * 1.1));
@@ -12,6 +12,8 @@ namespace GUI {
 
     export var canvas = <HTMLCanvasElement> document.getElementById("canvas");
     export var ctx = canvas.getContext("2d");
+    
+    export var currentCellDiv = document.getElementById("currentCellDiv");
     
     export var tiles = [new Image(GRID_STEP,GRID_STEP), 
                         new Image(GRID_STEP,GRID_STEP),
@@ -30,6 +32,8 @@ namespace GUI {
         Grid.init(gridWidth,gridHeight,GRID_STEP);
         
         ctx.fillRect(0, 0, canvas.width, canvas.height);
+        drawGrid();
+        drawToolPanel();
         
         window.onkeydown = Events.onKeyDown;
         canvas.addEventListener("mousedown", Events.onMouseDown);
@@ -43,6 +47,16 @@ namespace GUI {
     
     export function drawToolPanel() {
         ToolPanel.draw();
+    }
+    
+    export function showCell(cell) {
+        var res = "";
+        
+        res += "heat: " + cell.heat;
+        res += " light: " + cell.light;
+        res += " type: " + cell.type;
+        
+        return res;
     }
 }
 

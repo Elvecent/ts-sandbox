@@ -72,6 +72,12 @@ namespace Grid {
                 ctx.fillRect(i * step, j * step, step, step);
             }
         });
+        if (State.currentCell) {
+            var curX = State.currentCell.x;
+            var curY = State.currentCell.y;
+            var div = GUI.currentCellDiv;
+            div.textContent = "Cell under cursor: " + GUI.showCell(content[curX][curY]);
+        }
     }
     
     export function adjacent(i : number, j : number) : Array<[number,number]> {

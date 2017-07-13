@@ -73,8 +73,13 @@ namespace Events {
         else {
             if (ToolPanel.xOnPanel(x))
                 State.showToolPanel = true;
-            else 
+            else  {
+                var u = i - GUI.origin.x;
+                var v = j - GUI.origin.y;
                 State.showToolPanel = false;
+                State.currentCell = {x: u, y: v};
+                GUI.currentCellDiv.textContent = "Cell under cursor: " + GUI.showCell(Grid.content[u][v]);
+            }
         }
         
         GUI.drawToolPanel();   

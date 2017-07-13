@@ -182,6 +182,12 @@ var Grid;
                 ctx.fillRect(i * Grid.step, j * Grid.step, Grid.step, Grid.step);
             }
         });
+        if (State.currentCell) {
+            var curX = State.currentCell.x;
+            var curY = State.currentCell.y;
+            var div = GUI.currentCellDiv;
+            div.textContent = "Cell under cursor: " + GUI.showCell(Grid.content[curX][curY]);
+        }
     }
     Grid.draw = draw;
     function adjacent(i, j) {
@@ -308,7 +314,7 @@ var Light;
 var State;
 (function (State) {
     State.mouseDown = false;
-    State.showToolPanel = false;
+    State.showToolPanel = true;
     State.tool = "heat";
     State.toolButton = 0;
     State.showHeat = true;
@@ -450,8 +456,13 @@ var Events;
         else {
             if (ToolPanel.xOnPanel(x))
                 State.showToolPanel = true;
-            else
+            else {
+                var u = i - GUI.origin.x;
+                var v = j - GUI.origin.y;
                 State.showToolPanel = false;
+                State.currentCell = { x: u, y: v };
+                GUI.currentCellDiv.textContent = "Cell under cursor: " + GUI.showCell(Grid.content[u][v]);
+            }
         }
         GUI.drawToolPanel();
     }
@@ -522,12 +533,13 @@ var Events;
 var GUI;
 (function (GUI) {
     GUI.GRID_STEP = 20;
-    GUI.updateRate = 50;
+    GUI.updateRate = 80;
     var gridWidth = Math.floor(window.innerWidth / (GUI.GRID_STEP * 1.1));
     var gridHeight = Math.floor(window.innerHeight / (GUI.GRID_STEP * 1.1));
     GUI.origin = { x: 0, y: 0 };
     GUI.canvas = document.getElementById("canvas");
     GUI.ctx = GUI.canvas.getContext("2d");
+    GUI.currentCellDiv = document.getElementById("currentCellDiv");
     GUI.tiles = [new Image(GUI.GRID_STEP, GUI.GRID_STEP),
         new Image(GUI.GRID_STEP, GUI.GRID_STEP),
         new Image(GUI.GRID_STEP, GUI.GRID_STEP)];
@@ -541,6 +553,8 @@ var GUI;
         GUI.tiles[0].src = "air.jpg";
         Grid.init(gridWidth, gridHeight, GUI.GRID_STEP);
         GUI.ctx.fillRect(0, 0, GUI.canvas.width, GUI.canvas.height);
+        drawGrid();
+        drawToolPanel();
         window.onkeydown = Events.onKeyDown;
         GUI.canvas.addEventListener("mousedown", Events.onMouseDown);
         GUI.canvas.addEventListener("mouseup", Events.onMouseUp);
@@ -555,5 +569,13 @@ var GUI;
         ToolPanel.draw();
     }
     GUI.drawToolPanel = drawToolPanel;
+    function showCell(cell) {
+        var res = "";
+        res += "heat: " + cell.heat;
+        res += " light: " + cell.light;
+        res += " type: " + cell.type;
+        return res;
+    }
+    GUI.showCell = showCell;
 })(GUI || (GUI = {}));
 GUI.init();
