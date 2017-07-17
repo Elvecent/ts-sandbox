@@ -3,7 +3,7 @@
 /// <reference path="gui.ts" />
 namespace Grid {
     export interface Cell {
-        heat: number;
+        temperature: number;
         transferRate: number;
         type: number;
         light: number;
@@ -12,7 +12,7 @@ namespace Grid {
     export var width, height, step;
     
     export var content : Array<Array<Cell>>;
-    
+
     export function init(w,h,s) {
         width = w;
         height = h;
@@ -24,9 +24,33 @@ namespace Grid {
             content[i] = new Array<Cell>(height);
             
             for (j = 0; j < height; j++) {
-                content[i][j] = {heat: 0, transferRate: 1, type: 0, light: Light.ambient};
+                 content[i][j] = {temperature:0,
+                                  transferRate: 0.5, 
+                                  type: 0, 
+                                  light: Light.ambient};
             }
         }
+    }
+    
+    export function newAirCell(cell) {
+        cell.temperature = 0; 
+        cell.transferRate = 0.5;
+        cell.type = 0;
+        cell.light = Light.ambient;
+    }
+    
+    export function newStoneCell(cell) {
+        cell.temperature = 0; 
+        cell.transferRate = 0.4;
+        cell.type = 1;
+        cell.light = Light.ambient;
+    }
+    
+    export function newTorchCell(cell) {
+        cell.temperature = 0; 
+        cell.transferRate = 0.4;
+        cell.type = 2;
+        cell.light = Light.ambient;
     }
     
     export function update() {
@@ -34,7 +58,7 @@ namespace Grid {
         
         map(function (i, j, cell) {
             if (cell.type == 2)
-                cell.heat = min(255, cell.heat + 1);
+                cell.temperature = min(255, cell.temperature + 1);
         });
         
         State.flickerFlag += 1;
@@ -76,7 +100,7 @@ namespace Grid {
             var curX = State.currentCell.x;
             var curY = State.currentCell.y;
             var div = GUI.currentCellDiv;
-            div.textContent = "Cell under cursor: " + GUI.showCell(content[curX][curY]);
+            div.textContent = "Cell under cursor: " + GUI.showCell(curX, curY);
         }
     }
     
@@ -84,11 +108,11 @@ namespace Grid {
         var res = [];
         if (i > 0)
             res.push([i-1,j]);
-        if (i < this.width - 1)
+        if (i < width - 1)
             res.push([i+1,j]);
         if (j > 0)
             res.push([i,j-1]);
-        if (j < this.height - 1)
+        if (j < height - 1)
             res.push([i,j+1]);
         return res;
     }

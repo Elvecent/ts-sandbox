@@ -59,3 +59,7 @@ function calcStraightLine (startCoordinates : Point, endCoordinates : Point) {
     }
     return coordinatesArray;
 }
+
+function mathTrunc (x) {
+    return (x < 0 ? Math.ceil(x) : Math.floor(x));
+}

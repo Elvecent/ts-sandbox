@@ -3,7 +3,7 @@
 /// <reference path="tool_panel.ts" />
 namespace GUI {
     export var GRID_STEP = 20;
-    export var updateRate = 80;
+    export var updateRate = 100;
     
     var gridWidth = Math.floor(window.innerWidth / (GRID_STEP * 1.1));
     var gridHeight = Math.floor(window.innerHeight / (GRID_STEP * 1.1));
@@ -49,10 +49,11 @@ namespace GUI {
         ToolPanel.draw();
     }
     
-    export function showCell(cell) {
-        var res = "";
+    export function showCell(x, y) {
+        var cell = Grid.content[x][y];
+        var res = "(" + x + "," + y + ") ";
         
-        res += "heat: " + cell.heat;
+        res += "temperature: " + cell.temperature;
         res += " light: " + cell.light;
         res += " type: " + cell.type;
         

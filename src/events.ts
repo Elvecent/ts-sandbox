@@ -78,7 +78,7 @@ namespace Events {
                 var v = j - GUI.origin.y;
                 State.showToolPanel = false;
                 State.currentCell = {x: u, y: v};
-                GUI.currentCellDiv.textContent = "Cell under cursor: " + GUI.showCell(Grid.content[u][v]);
+                GUI.currentCellDiv.textContent = "Cell under cursor: " + GUI.showCell(u, v);
             }
         }
         
@@ -95,34 +95,31 @@ namespace Events {
             var cell = Grid.content[x][y];
             switch (State.tool) {
                 case "heat":
-                    cell.heat = 255;
+                    cell.temperature = 255;
                     ctx.fillStyle = "red";
                     ctx.fillRect(i * GRID_STEP, j * GRID_STEP, GRID_STEP, GRID_STEP);
                     break;
                 
                 case "cold":
-                    cell.heat = -255;
+                    cell.temperature = -255;
                     ctx.fillStyle = "blue";
                     ctx.fillRect(i * GRID_STEP, j * GRID_STEP, GRID_STEP, GRID_STEP);
                     break;
                     
                 case "stone":
-                    cell.type = 1;
-                    cell.transferRate = 0.2;
+                    Grid.newStoneCell(cell);
                     ctx.drawImage(GUI.tiles[1], i * GRID_STEP, j * GRID_STEP);
                     break;
                     
                 case "torch":
-                    cell.type = 2;
-                    cell.transferRate = 1;
+                    Grid.newTorchCell(cell);
                     ctx.drawImage(GUI.tiles[2], i * GRID_STEP, j * GRID_STEP);
-                    State.lightSources.push(new Light.LightSource(x, y, 100, 5));
+                    if (!Light.hasSource(State.lightSources, x, y))
+                        State.lightSources.push(new Light.LightSource(x, y, 100, 5));
                     break;
                     
                 case "air":
-                    cell.type = 0;
-                    cell.heat = 0;
-                    cell.transferRate = 1;
+                    Grid.newAirCell(cell);
                     if (Light.hasSource(State.lightSources, x, y))
                         Light.removeSource(State.lightSources, x, y);
                     ctx.drawImage(GUI.tiles[0], i * GRID_STEP, j * GRID_STEP);

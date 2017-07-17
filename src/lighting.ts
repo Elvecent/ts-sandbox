@@ -56,8 +56,8 @@ namespace Light {
         var cell = Grid.content[x][y];
         var light = cell.light;
         
-        if (cell.heat > Light.heatBarrier)
-            light = min(255, light + cell.heat - Light.heatBarrier);
+        if (cell.temperature > Light.heatBarrier)
+            light = min(255, light + cell.temperature - Light.heatBarrier);
         
         var a = (255 - light)/255;
                     
@@ -91,7 +91,7 @@ namespace Light {
             var rate = ls.flickerRate;
             var now = State.flickerFlag;
             if (rate > 0 && now % rate == 0) {
-                ls.power = 190 - ls.power;
+                ls.power = 180 - ls.power;
             }
         });
     }

@@ -4,20 +4,13 @@
 
 namespace Thermo {
     function processCell(i : number, j : number, c : Array<Array<Grid.Cell>>) {
-        // how it works:
-        // for a given grid cell with heat value n
-        // inspect the adjacent cells (up,down,left,right)
-        // calculate k in a way so after heat transfer the heat values
-        // of the given cell and adjacent cells are all equal to n-k
-        // apply multipliers for heat transfer rates and air resistance
-        // perform heat transfer (on a new heatmap, using the old one's info)
-        var cellHeat = Grid.content[i][j].heat;
+        var temperature = Grid.content[i][j].temperature;
         var adj = Grid.adjacent(i,j);
         var adjLow = adj.filter(function (p) {
-            return Grid.content[p[0]][p[1]].heat < cellHeat; 
+            return Grid.content[p[0]][p[1]].temperature < temperature; 
         });
         var l = adjLow.length;
-        var adjLowHeat = new Array<number>(l);
+        var adjLowT = new Array<number>(l);
         
         var z; // counter
         
@@ -26,21 +19,22 @@ namespace Thermo {
                 var x = p[0];
                 var y = p[1];
                 
-                adjLowHeat[z] = Grid.content[x][y].heat;
+                adjLowT[z] = Grid.content[x][y].temperature;
         }
         
-        if (l > 0 && cellHeat > -255) {
-            var s = arrSum(adjLowHeat);
-            var k = (l * cellHeat - s) / (l + 1);
+        if (l > 0) {
+            var s = arrSum(adjLowT);
+            var k = (l * temperature - s) / (l + 1);
             
             var deltas = new Array<number>(l);
             for (z = 0; z < l; z++) {
                 var x = adjLow[z][0];
                 var y = adjLow[z][1];
-                var rate = (Grid.content[x][y].transferRate + Grid.content[i][j].transferRate)/2;
-                if ((Grid.content[x][y].type == 0) !== (Grid.content[i][j].type == 0))
-                    rate *= 0.1;
-                deltas[z] = Math.floor((cellHeat - k - adjLowHeat[z]) * rate);
+                var rate;
+                if (Grid.content[x][y].type != Grid.content[i][j].type)
+                    rate = Grid.content[x][y].transferRate * Grid.content[i][j].transferRate;
+                else rate = Grid.content[x][y].transferRate;
+                deltas[z] = mathTrunc((temperature - k - adjLowT[z]) * rate);
             }
 
             for (z = 0; z < l; z++) {
@@ -48,10 +42,11 @@ namespace Thermo {
                 var x = p[0];
                 var y = p[1];
                 
-                c[x][y].heat += deltas[z];
+                c[x][y].temperature += deltas[z];
+                if (Grid.content[x][y].temperature > temperature) alert("wtf");
             }
 
-            c[i][j].heat -= arrSum(deltas);
+            c[i][j].temperature -= arrSum(deltas);
         }
     }
     
@@ -79,13 +74,14 @@ namespace Thermo {
     export function filter(x, y, i, j) {
         var GRID_STEP = GUI.GRID_STEP;
         if (Grid.hasPoint(x, y)) {
-            var heat = Grid.content[x][y].heat;
-            var a = Math.abs(heat / 255);
+ 
+            var temperature = Grid.content[x][y].temperature;
+            var a = Math.abs(temperature / 255);
                 
             var red = 0;
             var blue = 0;
                 
-            if (heat > 0) 
+            if (temperature > 0) 
                 red = 255;
             else 
                 blue = 255;

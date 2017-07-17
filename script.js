@@ -44,52 +44,52 @@ function calcStraightLine(startCoordinates, endCoordinates) {
     }
     return coordinatesArray;
 }
+function mathTrunc(x) {
+    return (x < 0 ? Math.ceil(x) : Math.floor(x));
+}
 /// <reference path="grid.ts" />
 /// <reference path="general.ts" />
 /// <reference path="gui.ts" />
 var Thermo;
 (function (Thermo) {
     function processCell(i, j, c) {
-        // how it works:
-        // for a given grid cell with heat value n
-        // inspect the adjacent cells (up,down,left,right)
-        // calculate k in a way so after heat transfer the heat values
-        // of the given cell and adjacent cells are all equal to n-k
-        // apply multipliers for heat transfer rates and air resistance
-        // perform heat transfer (on a new heatmap, using the old one's info)
-        var cellHeat = Grid.content[i][j].heat;
+        var temperature = Grid.content[i][j].temperature;
         var adj = Grid.adjacent(i, j);
         var adjLow = adj.filter(function (p) {
-            return Grid.content[p[0]][p[1]].heat < cellHeat;
+            return Grid.content[p[0]][p[1]].temperature < temperature;
         });
         var l = adjLow.length;
-        var adjLowHeat = new Array(l);
+        var adjLowT = new Array(l);
         var z; // counter
         for (z = 0; z < l; z++) {
             var p = adjLow[z];
             var x = p[0];
             var y = p[1];
-            adjLowHeat[z] = Grid.content[x][y].heat;
+            adjLowT[z] = Grid.content[x][y].temperature;
         }
-        if (l > 0 && cellHeat > -255) {
-            var s = arrSum(adjLowHeat);
-            var k = (l * cellHeat - s) / (l + 1);
+        if (l > 0) {
+            var s = arrSum(adjLowT);
+            var k = (l * temperature - s) / (l + 1);
             var deltas = new Array(l);
             for (z = 0; z < l; z++) {
                 var x = adjLow[z][0];
                 var y = adjLow[z][1];
-                var rate = (Grid.content[x][y].transferRate + Grid.content[i][j].transferRate) / 2;
-                if ((Grid.content[x][y].type == 0) !== (Grid.content[i][j].type == 0))
-                    rate *= 0.1;
-                deltas[z] = Math.floor((cellHeat - k - adjLowHeat[z]) * rate);
+                var rate;
+                if (Grid.content[x][y].type != Grid.content[i][j].type)
+                    rate = Grid.content[x][y].transferRate * Grid.content[i][j].transferRate;
+                else
+                    rate = Grid.content[x][y].transferRate;
+                deltas[z] = mathTrunc((temperature - k - adjLowT[z]) * rate);
             }
             for (z = 0; z < l; z++) {
                 var p = adjLow[z];
                 var x = p[0];
                 var y = p[1];
-                c[x][y].heat += deltas[z];
+                c[x][y].temperature += deltas[z];
+                if (Grid.content[x][y].temperature > temperature)
+                    alert("wtf");
             }
-            c[i][j].heat -= arrSum(deltas);
+            c[i][j].temperature -= arrSum(deltas);
         }
     }
     function dissipate() {
@@ -111,11 +111,11 @@ var Thermo;
     function filter(x, y, i, j) {
         var GRID_STEP = GUI.GRID_STEP;
         if (Grid.hasPoint(x, y)) {
-            var heat = Grid.content[x][y].heat;
-            var a = Math.abs(heat / 255);
+            var temperature = Grid.content[x][y].temperature;
+            var a = Math.abs(temperature / 255);
             var red = 0;
             var blue = 0;
-            if (heat > 0)
+            if (temperature > 0)
                 red = 255;
             else
                 blue = 255;
@@ -139,16 +139,40 @@ var Grid;
         for (i = 0; i < Grid.width; i++) {
             Grid.content[i] = new Array(Grid.height);
             for (j = 0; j < Grid.height; j++) {
-                Grid.content[i][j] = { heat: 0, transferRate: 1, type: 0, light: Light.ambient };
+                Grid.content[i][j] = { temperature: 0,
+                    transferRate: 0.5,
+                    type: 0,
+                    light: Light.ambient };
             }
         }
     }
     Grid.init = init;
+    function newAirCell(cell) {
+        cell.temperature = 0;
+        cell.transferRate = 0.5;
+        cell.type = 0;
+        cell.light = Light.ambient;
+    }
+    Grid.newAirCell = newAirCell;
+    function newStoneCell(cell) {
+        cell.temperature = 0;
+        cell.transferRate = 0.4;
+        cell.type = 1;
+        cell.light = Light.ambient;
+    }
+    Grid.newStoneCell = newStoneCell;
+    function newTorchCell(cell) {
+        cell.temperature = 0;
+        cell.transferRate = 0.4;
+        cell.type = 2;
+        cell.light = Light.ambient;
+    }
+    Grid.newTorchCell = newTorchCell;
     function update() {
         Thermo.dissipate();
         map(function (i, j, cell) {
             if (cell.type == 2)
-                cell.heat = min(255, cell.heat + 1);
+                cell.temperature = min(255, cell.temperature + 1);
         });
         State.flickerFlag += 1;
         State.flickerFlag %= 10000;
@@ -186,7 +210,7 @@ var Grid;
             var curX = State.currentCell.x;
             var curY = State.currentCell.y;
             var div = GUI.currentCellDiv;
-            div.textContent = "Cell under cursor: " + GUI.showCell(Grid.content[curX][curY]);
+            div.textContent = "Cell under cursor: " + GUI.showCell(curX, curY);
         }
     }
     Grid.draw = draw;
@@ -194,11 +218,11 @@ var Grid;
         var res = [];
         if (i > 0)
             res.push([i - 1, j]);
-        if (i < this.width - 1)
+        if (i < Grid.width - 1)
             res.push([i + 1, j]);
         if (j > 0)
             res.push([i, j - 1]);
-        if (j < this.height - 1)
+        if (j < Grid.height - 1)
             res.push([i, j + 1]);
         return res;
     }
@@ -274,8 +298,8 @@ var Light;
         var step = Grid.step;
         var cell = Grid.content[x][y];
         var light = cell.light;
-        if (cell.heat > Light.heatBarrier)
-            light = min(255, light + cell.heat - Light.heatBarrier);
+        if (cell.temperature > Light.heatBarrier)
+            light = min(255, light + cell.temperature - Light.heatBarrier);
         var a = (255 - light) / 255;
         ctx.fillStyle = "rgba(0,0,0," + a + ")";
         ctx.fillRect(i * step, j * step, step, step);
@@ -304,7 +328,7 @@ var Light;
             var rate = ls.flickerRate;
             var now = State.flickerFlag;
             if (rate > 0 && now % rate == 0) {
-                ls.power = 190 - ls.power;
+                ls.power = 180 - ls.power;
             }
         });
     }
@@ -461,7 +485,7 @@ var Events;
                 var v = j - GUI.origin.y;
                 State.showToolPanel = false;
                 State.currentCell = { x: u, y: v };
-                GUI.currentCellDiv.textContent = "Cell under cursor: " + GUI.showCell(Grid.content[u][v]);
+                GUI.currentCellDiv.textContent = "Cell under cursor: " + GUI.showCell(u, v);
             }
         }
         GUI.drawToolPanel();
@@ -475,30 +499,27 @@ var Events;
             var cell = Grid.content[x][y];
             switch (State.tool) {
                 case "heat":
-                    cell.heat = 255;
+                    cell.temperature = 255;
                     ctx.fillStyle = "red";
                     ctx.fillRect(i * GRID_STEP, j * GRID_STEP, GRID_STEP, GRID_STEP);
                     break;
                 case "cold":
-                    cell.heat = -255;
+                    cell.temperature = -255;
                     ctx.fillStyle = "blue";
                     ctx.fillRect(i * GRID_STEP, j * GRID_STEP, GRID_STEP, GRID_STEP);
                     break;
                 case "stone":
-                    cell.type = 1;
-                    cell.transferRate = 0.2;
+                    Grid.newStoneCell(cell);
                     ctx.drawImage(GUI.tiles[1], i * GRID_STEP, j * GRID_STEP);
                     break;
                 case "torch":
-                    cell.type = 2;
-                    cell.transferRate = 1;
+                    Grid.newTorchCell(cell);
                     ctx.drawImage(GUI.tiles[2], i * GRID_STEP, j * GRID_STEP);
-                    State.lightSources.push(new Light.LightSource(x, y, 100, 5));
+                    if (!Light.hasSource(State.lightSources, x, y))
+                        State.lightSources.push(new Light.LightSource(x, y, 100, 5));
                     break;
                 case "air":
-                    cell.type = 0;
-                    cell.heat = 0;
-                    cell.transferRate = 1;
+                    Grid.newAirCell(cell);
                     if (Light.hasSource(State.lightSources, x, y))
                         Light.removeSource(State.lightSources, x, y);
                     ctx.drawImage(GUI.tiles[0], i * GRID_STEP, j * GRID_STEP);
@@ -533,7 +554,7 @@ var Events;
 var GUI;
 (function (GUI) {
     GUI.GRID_STEP = 20;
-    GUI.updateRate = 80;
+    GUI.updateRate = 100;
     var gridWidth = Math.floor(window.innerWidth / (GUI.GRID_STEP * 1.1));
     var gridHeight = Math.floor(window.innerHeight / (GUI.GRID_STEP * 1.1));
     GUI.origin = { x: 0, y: 0 };
@@ -569,9 +590,10 @@ var GUI;
         ToolPanel.draw();
     }
     GUI.drawToolPanel = drawToolPanel;
-    function showCell(cell) {
-        var res = "";
-        res += "heat: " + cell.heat;
+    function showCell(x, y) {
+        var cell = Grid.content[x][y];
+        var res = "(" + x + "," + y + ") ";
+        res += "temperature: " + cell.temperature;
         res += " light: " + cell.light;
         res += " type: " + cell.type;
         return res;
